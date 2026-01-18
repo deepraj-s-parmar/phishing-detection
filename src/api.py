@@ -164,7 +164,31 @@ def predict():
 
         # Extract features (do_whois flag can be toggled)
         feats = extract_kaggle_features(url, expected_columns=expected_cols, do_whois=bool(do_whois))
+        
+        # ---------------- HARD TRUST GATE (FINAL & LOCKED) ----------------
+        def get_numeric(feats, key, default=0):
+            try:
+                return float(feats.get(key, default))
+            except Exception:
+                return default
 
+        # Reliable trust signal from dataset
+        domain_age_days = get_numeric(feats, "time_domain_activation", 0)
+
+        # FINAL RULE:
+        # Old domain → Legitimate
+        if domain_age_days > 365:
+            return jsonify({
+                "url": url,
+                "prediction": "Legitimate",
+                "confidence": 0.99,
+                "decision_type": "RULE_BASED",
+                "reason": "Domain age indicates a well-established and trusted website",
+                "top_contributions": []
+            }), 200
+
+
+        
         # Build DataFrame in expected column order (robustly)
         # feats can be dict or list-like depending on your extractor; handle dict case
         if isinstance(feats, dict):
